@@ -164,7 +164,6 @@ ngx_http_cors_header_filter(ngx_http_request_t *r)
     ngx_str_t             find, replace;
     ngx_str_t            *value;
     ngx_uint_t            i;
-    ngx_regex_elt_t       *re;
     ngx_http_cors_loc_conf_t *hclf;
 
     hclf = ngx_http_get_module_loc_conf(r, ngx_http_cors_filter_module);
