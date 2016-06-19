@@ -167,6 +167,9 @@ ngx_http_cors_header_filter(ngx_http_request_t *r)
     ngx_regex_elt_t       *re;
     ngx_http_cors_loc_conf_t *hclf;
 
+    (void)value;
+    (void)re;
+
     hclf = ngx_http_get_module_loc_conf(r, ngx_http_cors_filter_module);
     if (hclf->cors == NULL || hclf->cors->nelts == 0) {
         return ngx_http_next_header_filter(r);
