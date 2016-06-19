@@ -4,15 +4,20 @@
 #include <nginx.h>
 
 
+#define CORS_HEADER_ORIGIN "origin"
+
+
 static ngx_int_t ngx_http_cors_filter_init(ngx_conf_t *cf);
 static void *ngx_http_cors_create_loc_conf(ngx_conf_t *cf);
 static ngx_int_t ngx_http_cors_header_filter(ngx_http_request_t *r);
 static char * ngx_http_cors_add(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 static char *ngx_http_cors_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
-
+static ngx_int_t ngx_http_cors_response_header_replace_or_add(ngx_http_request_t *r,
+                                                              ngx_str_t *find, ngx_str_t *replace);
 
 typedef struct {
     ngx_array_t *cors;
+    ngx_flag_t force;
 } ngx_http_cors_loc_conf_t;
 
 
@@ -39,7 +44,15 @@ static ngx_command_t ngx_http_cors_filter_commands[] = {
         NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
         ngx_http_cors_add,
         NGX_HTTP_LOC_CONF_OFFSET,
-        0,
+        offsetof(ngx_http_cors_loc_conf_t, cors),
+        NULL
+    },
+    {
+        ngx_string("cors_force"),
+        NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
+        ngx_conf_set_flag_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_cors_loc_conf_t, force),
         NULL
     },
     ngx_null_command
@@ -121,6 +134,7 @@ ngx_http_cors_create_loc_conf(ngx_conf_t *cf)
     if (conf == NULL) {
         return NULL;
     }
+    conf->force = NGX_CONF_UNSET;
 
     return conf;
 }
@@ -135,6 +149,7 @@ ngx_http_cors_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     if (conf->cors == NULL) {
         conf->cors = prev->cors;
     }
+    ngx_conf_merge_value(conf->force, prev->force, 1);
 
     return NGX_CONF_OK;
 }
@@ -146,10 +161,10 @@ ngx_http_cors_header_filter(ngx_http_request_t *r)
     ngx_list_part_t      *part = &r->headers_in.headers.part;
     ngx_table_elt_t      *header = part->elts;
 
-    ngx_regex_elt_t *re;
+    ngx_str_t             find, replace;
     ngx_str_t            *value;
     ngx_uint_t            i;
-    ngx_table_elt_t      *h;
+    ngx_regex_elt_t       *re;
     ngx_http_cors_loc_conf_t *hclf;
 
     hclf = ngx_http_get_module_loc_conf(r, ngx_http_cors_filter_module);
@@ -171,8 +186,8 @@ ngx_http_cors_header_filter(ngx_http_request_t *r)
         }
 
         if (0 == ngx_strncasecmp(header[i].key.data,
-                (u_char *) "origin",
-                header[i].key.len
+                (u_char *) CORS_HEADER_ORIGIN,
+                sizeof(CORS_HEADER_ORIGIN) - 1
             ))
         {
             goto found;
@@ -189,28 +204,17 @@ found:
     }
 
     value = hclf->cors->elts;
-    h = ngx_list_push(&r->headers_out.headers);
-    if (h == NULL) {
+
+    ngx_str_set(&find, "Access-Control-Allow-Credentials");
+    ngx_str_set(&replace, "true");
+    if (ngx_http_cors_response_header_replace_or_add(r, &find, &replace) != NGX_OK) {
         return NGX_ERROR;
     }
 
-    /* tips
-        we add two headers whether response header already have this header
-        make sure response should do not add two headers as following
-    */
-    h->hash = 1;
-    ngx_str_set(&h->key, "Access-Control-Allow-Credentials");
-    ngx_str_set(&h->value, "true");
-
-    h = ngx_list_push(&r->headers_out.headers);
-    if (h == NULL) {
+    ngx_str_set(&find, "Access-Control-Allow-Origin");
+    if (ngx_http_cors_response_header_replace_or_add(r, &find, &header[i].value) != NGX_OK) {
         return NGX_ERROR;
     }
-
-    h->hash = 1;
-    ngx_str_set(&h->key, "Access-Control-Allow-Origin");
-    h->value.len = header[i].value.len;
-    h->value.data = header[i].value.data;
 
     return ngx_http_next_header_filter(r);
 }
@@ -221,6 +225,67 @@ ngx_http_cors_filter_init(ngx_conf_t *cf)
 {
     ngx_http_next_header_filter = ngx_http_top_header_filter;
     ngx_http_top_header_filter = ngx_http_cors_header_filter;
+
+    return NGX_OK;
+}
+
+static ngx_int_t
+ngx_http_cors_response_header_replace_or_add(ngx_http_request_t *r,
+                                             ngx_str_t *find,
+                                             ngx_str_t *replace)
+{
+    ngx_list_part_t      *part = &r->headers_out.headers.part;
+    ngx_table_elt_t      *header = part->elts;
+
+    ngx_uint_t            i;
+    ngx_table_elt_t      *h;
+    ngx_http_cors_loc_conf_t *hclf;
+
+    hclf = ngx_http_get_module_loc_conf(r, ngx_http_cors_filter_module);
+
+    if (hclf->force == 0 || hclf->force == NGX_CONF_UNSET) {
+        goto add;
+    }
+
+    for (i = 0; /* void */ ; i++) {
+        if (i >= part->nelts) {
+            if (part->next == NULL) {
+                break;
+            }
+            part = part->next;
+            header = part->elts;
+            i = 0;
+        }
+        if (header[i].hash == 0) {
+            continue;
+        }
+
+        if (0 == ngx_strncasecmp(header[i].key.data,
+                find->data,
+                find->len
+            ))
+        {
+            goto found;
+        }
+    }
+
+add:
+    h = ngx_list_push(&r->headers_out.headers);
+    if (h == NULL) {
+        return NGX_ERROR;
+    }
+
+    h->hash = 1;
+    h->key.len = find->len;
+    h->key.data = find->data;
+    h->value.len = replace->len;
+    h->value.data = replace->data;
+
+    return NGX_OK;
+
+found:
+    header[i].value.len = replace->len;
+    header[i].value.data = replace->data;
 
     return NGX_OK;
 }
