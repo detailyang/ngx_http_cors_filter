@@ -38,10 +38,10 @@ ngx_http_cors_filter requires the following to run:
 Direction
 ------------
 
-* cors: cors codition
-Syntax:     cors regex
-Default:    -
-Context:    main|server|location
+* cors: cors codition       
+Syntax:     cors regex       
+Default:    -        
+Context:    main|server|location       
 
 ```
 http {
@@ -50,10 +50,10 @@ http {
 }
 ```
 
-* cors_force: force coover reseponse header even if it have already [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS) header
-Syntax:     cors_force on|off
-Default:    on
-Context:    main|server|location
+* cors_force: force coover reseponse header even if it have already [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS) header       
+Syntax:     cors_force on|off      
+Default:    on           
+Context:    main|server|location       
 
 ```
 http {
