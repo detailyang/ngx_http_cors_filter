@@ -16,7 +16,7 @@ ngx_http_cors_filter_module is a an addon for nginx to dynamic generate cors(Cro
     }
 ```
 
-But you know if is evil and add_header should be in location when it is in if context:(. So you cors, just do this as following:
+But you know if is evil and add_header should be in location when it is in if context:(. So use cors, just do this as following:
 
 ```
 http {
