@@ -2,7 +2,33 @@
 ![Branch master](https://img.shields.io/badge/branch-master-brightgreen.svg?style=flat-square)[![Build](https://api.travis-ci.org/detailyang/ngx_http_cors_filter.svg)](https://travis-ci.org/detailyang/ngx_http_cors_filter)[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/detailyang/ngx_http_cors_filter/master/LICENSE)[![release](https://img.shields.io/github/release/detailyang/ngx_http_cors_filter.svg)](https://github.com/detailyang/ngx_http_cors_filter/releases)
 
 
-ngx_http_cors_filter_module is a an addon for nginx to dynamic generate cors(Cross-Origin Resource Sharing)
+ngx_http_cors_filter_module is a an addon for nginx to dynamic generate cors(Cross-Origin Resource Sharing). Also we can use if to get the the same purpose as following:
+
+```
+    server {
+        location / {
+            if ($http_origin ~ '//(.*?\.example\.com|example\.com)$') {
+                add_header 'Access-Control-Allow-Origin' "$http_origin";
+                add_header 'Access-Control-Allow-Credentials' 'true';
+            }
+            proxy_pass xx;
+        }
+    }
+```
+
+But you know if is evil and add_header should be in location when it is in if context:(. So you cors, just do this as following:
+
+```
+http {
+    cors //(.*?\.example\.com|example\.com)$;
+}
+
+or 
+http {
+    cors //example\.com$;
+    cors //.*?\.example\.com$;
+}
+```
 
 
 Table of Contents
@@ -38,10 +64,10 @@ ngx_http_cors_filter requires the following to run:
 Direction
 ------------
 
-* cors: cors codition
-Syntax:     cors regex
-Default:    -
-Context:    main|server|location
+* cors: cors codition       
+Syntax:     cors regex       
+Default:    -        
+Context:    main|server|location       
 
 ```
 http {
@@ -50,10 +76,10 @@ http {
 }
 ```
 
-* cors_force: force coover reseponse header even if it have already [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS) header
-Syntax:     cors_force on|off
-Default:    on
-Context:    main|server|location
+* cors_force: force coover reseponse header even if it have already [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS) header       
+Syntax:     cors_force on|off      
+Default:    on           
+Context:    main|server|location       
 
 ```
 http {
