@@ -1,4 +1,4 @@
-# move to [nginx-lover/ngx_http_cors_filter](https://github.com/nginx-lover/ngx_http_updown)
+# move to [nginx-lover/ngx_http_cors_filter](https://github.com/x-v8/ngx_http_cors_filter)
 # ngx_http_cors_filter
 ![Branch master](https://img.shields.io/badge/branch-master-brightgreen.svg?style=flat-square)[![Build](https://api.travis-ci.org/detailyang/ngx_http_cors_filter.svg)](https://travis-ci.org/detailyang/ngx_http_cors_filter)[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/detailyang/ngx_http_cors_filter/master/LICENSE)[![release](https://img.shields.io/github/release/detailyang/ngx_http_cors_filter.svg)](https://github.com/detailyang/ngx_http_cors_filter/releases)
 
